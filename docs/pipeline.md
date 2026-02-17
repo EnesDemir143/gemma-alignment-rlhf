@@ -82,6 +82,43 @@ Modelin talimatları anlaması ve UltraFeedback kalitesine alışması için yap
 | `warmup_steps` | 100 |
 | `max_seq_length` | 512 |
 
+### 🔍 Modele Ne Veriliyor? (GenRM Formatı)
+
+SFT aşamasında model bir **Generative Reward Model (GenRM)** olarak eğitilir. Yani model, bir cevabın kalitesini değerlendirmeyi öğrenir.
+
+Tokenizer, `train.jsonl`'deki her satırı Gemma chat template ile şu sequence'a çevirir:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ <bos><start_of_turn>user                                           │
+│ User: Write a eulogy for a public figure who inspired you.         │
+│                                                                     │
+│ Assistant: Ladies and gentlemen, we gather here today to celebrate  │
+│ the life and legacy of...                                          │
+│                                                                     │
+│ Analyze the quality of this response.                              │
+│ <end_of_turn>                                                       │
+│ <start_of_turn>model                                               │
+│ Score: 8.5/10. The response is helpful, harmless, and honest.      │  ◄── MODEL BUNU ÜRETMEYİ ÖĞRENİR
+│ <end_of_turn><eos>                                                  │
+└─────────────────────────────────────────────────────────────────────┘
+         ▲                                           ▲
+         │                                           │
+    CONTEXT (input)                          TARGET (loss hesaplanır)
+```
+
+> [!IMPORTANT]
+> Model **soru cevaplamayı değil**, verilen bir cevabı **puanlamayı** öğreniyor. Bu yüzden "user" mesajının içinde hem prompt hem de chosen response birlikte yer alır.
+
+### 🗺️ Faz Bazlı Model Girdi/Çıktı Özeti
+
+| Faz | Modele Giren | Modelden Çıkan | Amaç |
+|-----|-------------|----------------|------|
+| **1. SFT** | prompt + chosen response + "Analyze..." | `"Score: X/10..."` | GenRM olarak skor üretmeyi öğren |
+| **2. RM (BT)** | prompt + chosen / rejected (ayrı ayrı) | scalar reward `r(x,y)` | Chosen > rejected sıralamasını öğren |
+| **3A. PPO** | prompt → Actor response üretir | RM skorlar → GAE → policy update | Yüksek reward alan cevaplar üret |
+| **3B. GRPO** | prompt → Actor K=6 response üretir | RM skorlar → group-relative advantage | Grup içinde en iyiyi öğren |
+
 > **Çıktı:** `sft_adapter.npz` → Base Gemma'ya merge edilerek `sft_merged_model` oluşur.
 
 **⚠️ KRİTİK:** Bu model her iki alignment yöntemi için de **reference point**'tir. Aynı `sft_merged_model` hem PPO hem GRPO başlangıcında kullanılır.
@@ -102,6 +139,40 @@ Modelin talimatları anlaması ve UltraFeedback kalitesine alışması için yap
   "rejected": "Python'da liste yok, sadece array var..."
 }
 ```
+
+### 📦 GenRM Training Data Format (`train.jsonl`)
+
+`download_data.py`, ham UltraFeedback verisini aşağıdaki GenRM formatına dönüştürür:
+
+```
+Raw UltraFeedback                          train.jsonl
+┌──────────────────────┐                   ┌──────────────────────────────────┐
+│ prompt               │──┐                │ messages[0] (role: "user")       │
+│ chosen[-1].content   │──┤── concat ──►   │   "User: {prompt}\n\n            │
+│                      │  │                │    Assistant: {chosen}\n\n       │
+│                      │  │                │    Analyze the quality..."       │
+│ score_chosen         │──┘── format ──►   │ messages[1] (role: "assistant")  │
+│                      │                   │   "Score: {score}/10. ..."       │
+└──────────────────────┘                   └──────────────────────────────────┘
+```
+
+| `train.jsonl` Alanı | Kaynak | İçerik |
+|----------------------|--------|--------|
+| `messages[0]` (user) | `prompt` + `chosen` response | Orijinal prompt + chosen cevap + "Analyze the quality..." talimatı |
+| `messages[1]` (assistant) | `score_chosen` | `"Score: {score:.1f}/10. The response is helpful, harmless, and honest."` |
+| Score | Yalnızca `score_chosen` | Regex ile parse: `Score:\s*([0-9]+(?:\.[0-9]+)?)/10` |
+
+> [!IMPORTANT]
+> Yalnızca `score_chosen` kullanılır — rejected response'un skoru training verisinde yer almaz. "User" mesajı, prompt **ve** chosen response'u birlikte içerir.
+
+**EDA Notebook'taki Kolon Karşılıkları:**
+
+| Notebook Kolonu | Gerçek İçerik | Açıklama |
+|-----------------|---------------|----------|
+| `user_tokens` | prompt + chosen response + instruction | Fine-tuning input uzunluğu (uzun) |
+| `assistant_tokens` | `"Score: X/10..."` | Sadece skor cümlesi (~15 token, çok kısa) |
+| `chat_tokens` | user + assistant + chat template overhead | Toplam sequence uzunluğu (fine-tuning'deki gerçek uzunluk) |
+| `score` | `score_chosen` | 0–10 arası float |
 
 ### 🧠 Bradley-Terry Model Yapısı
 

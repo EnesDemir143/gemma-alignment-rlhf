@@ -1,0 +1,14 @@
+data:
+  train_jsonl: data/train.jsonl
+
+tokenizer:
+  model_id: google/gemma-2-2b
+  env_var: MLX_GEMMA_MODEL
+
+score:
+  pattern: 'Score:\s*([0-9]+(?:\.[0-9]+)?)/10'
+
+plotting:
+  style:
+    - science
+    - ieee

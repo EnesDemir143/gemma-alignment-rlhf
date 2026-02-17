@@ -37,6 +37,31 @@ Gemma 2B (4-bit)
 
 - [UltraFeedback](https://huggingface.co/datasets/openbmb/UltraFeedback) — Large-scale, fine-grained preference dataset with chosen/rejected response pairs.
 
+### Data Transformation (`download_data.py`)
+
+The raw UltraFeedback dataset is transformed into a GenRM-style JSONL format for SFT training:
+
+```
+Raw UltraFeedback                          train.jsonl
+┌──────────────────────┐                   ┌──────────────────────────────────┐
+│ prompt               │──┐                │ messages[0] (role: "user")       │
+│ chosen[-1].content   │──┤── concat ──►   │   "User: {prompt}\n\n            │
+│                      │  │                │    Assistant: {chosen}\n\n       │
+│                      │  │                │    Analyze the quality..."       │
+│ score_chosen         │──┘── format ──►   │ messages[1] (role: "assistant")  │
+│                      │                   │   "Score: {score}/10. ..."       │
+└──────────────────────┘                   └──────────────────────────────────┘
+```
+
+| `train.jsonl` Field | Source | Content |
+|---------------------|--------|---------|
+| `messages[0]` (user) | `prompt` + `chosen` response | Original prompt + chosen response + "Analyze the quality..." instruction |
+| `messages[1]` (assistant) | `score_chosen` | `"Score: {score:.1f}/10. The response is helpful, harmless, and honest."` |
+| Score | `score_chosen` only | Parsed via regex `Score:\s*([0-9]+(?:\.[0-9]+)?)/10` |
+
+> [!NOTE]
+> Only `score_chosen` is used — the rejected response score is not included in the training data. The "user" message contains both the prompt **and** the chosen response concatenated together.
+
 ## 🔑 Key Techniques
 
 ### Bradley-Terry Reward Model
