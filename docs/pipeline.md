@@ -54,7 +54,33 @@ Bu pipeline, PPO ve GRPO algoritmalarını kontrollü bir ortamda karşılaştı
 | **Peak VRAM** | Maksimum bellek kullanımı | `mx.metal.get_peak_memory()` |
 | **Convergence Speed** | Win rate %60'a ulaşma iterasyonu | Training curve |
 | **Variance Across Runs** | 3 seed arasındaki std sapması | Std(win_rate) |
+| **Win Rate 95% CI** | Win rate hata payı (Wilson Score Interval) | `p ± 1.96 * sqrt(p(1-p)/N)` |
 | **Cohen's d** | Effect size (birincil karşılaştırma metriği) | Standardized mean difference |
+| **Avg Response Length** | Verbosity bias kontrolü (uzun = iyi mi?) | Token count diff (PPO vs SFT) |
+| **Mean Reward Score** | Reward inflation kontrolü | Average RM score over time |
+
+> [!WARNING]
+> **Gizli Tehlikeler: Verbosity Bias & Reward Inflation**
+> *   **Verbosity Bias (Gevezelik):** Model sadece "daha uzun" yazdığı için ödül alıyor olabilir. PPO cevabı SFT'den 2 kat uzunsa ama Win Rate artmadıysa, başarı sahtedir.
+> *   **Reward Inflation (Puan Şişmesi):** Reward Model zamanla hep daha yüksek puanlar verebilir (3.0 -> 9.0). Eğer Win Rate sabit kalıyorsa, bu puan artışı aşırı optimizasyondur (Overoptimization).
+
+> [!NOTE]
+> **Neden Confidence Interval (%95 CI)?**
+> Sadece "Win Rate %65" demek yetmez. Hata payını bilmek gerekir.
+> *   Eğer PPO **%65 (±%4)** ve GRPO **%60 (±%8)** ise, aralıkları **örtüşür (%61-%69 vs %52-%68)**.
+> *   Bu durumda "PPO kesinlikle daha iyidir" diyemeyiz. CI bize **istatistiksel güvenilirliği** gösterir.
+
+> [!NOTE]
+> **Neden Cohen's d? (Effect Size vs Significance)**
+> Sadece "PPO kazandı" (p-value) demek yetmez, çünkü 3 run ile istatistiksel anlamlılık (significance) yakalamak zordur. Cohen's d bize **"Fark ne kadar büyük?"** (Effect Size) sorusunun cevabını verir.
+> *   **0.2 (Small):** Fark var ama şans eseri olabilir.
+> *   **0.5 (Medium):** Belirgin bir üstünlük var.
+> *   **0.8 (Large):** Ezici bir üstünlük var (Variance'dan etkilenmiyor).
+
+> [!TIP]
+> **Neden GPT-4o-mini & Position Swap?**
+> *   **Hakem (Judge):** Matematiksel bir "doğru cevap" olmadığı için, cevabın kalitesini bir insan gibi değerlendirecek başka bir modele (GPT-4o-mini) ihtiyacımız var. Maliyeti düşük, hızı yüksek (~$1).
+> *   **Position Swap:** Jüri modelleri genelde "ilk cevabı" seçme eğilimindedir (Bias). Bunu kırmak için her maçı iki kere yaptırırız: (A vs B) ve (B vs A). Eğer ikisinde de aynı model kazanırsa sonuç geçerlidir (Tie Rate düşük olmalı).
 
 ---
 
@@ -126,6 +152,13 @@ Tokenizer, `train.jsonl`'deki her satırı Gemma chat template ile şu sequence'
 ---
 
 ## ⚖️ **FAZ 2: Bradley-Terry Reward Model Eğitimi**
+
+> [!NOTE]
+> **Eğitimsel Not: Supervised vs Reinforcement Learning**
+> Bradley-Terry eğitimi teknik olarak **Supervised Learning**'dir, RL değildir.
+> *   **SFT (Faz 1):** Modele "Cevap şöyle olmalı" diyerek **taklit etmeyi** öğretiriz.
+> *   **RM (Faz 2):** Modele "Hangisi daha iyi?" diyerek **eleştirmeyi** öğretiriz. Bu model maçın hakemidir.
+> *   **RL (Faz 3):** Hakemin oyuna dahil olduğu ve modelin skoru artırmak için çabaladığı yer burasıdır.
 
 > [!IMPORTANT]
 > **Pairwise Preference Modeling.** UltraFeedback'teki `chosen` / `rejected` çiftleri kullanılarak Bradley-Terry modeli eğitilir. Eğitilen RM, training sırasında her üretilen cevaba scalar skor verir.
@@ -224,11 +257,33 @@ def bradley_terry_loss(rm_model, prompt, chosen, rejected):
 
 > **Çıktı:** `rm_model_bt` → Bradley-Terry RM. Eğitim sonrasında pairwise accuracy ≥ 0.70 beklenir.
 
+> [!CAUTION]
+> **Sanity Check: Calibration Error (ECE)**
+> Accuracy tek başına yetmez! Model "%90 eminim" dediğinde gerçekten %90 haklı mı çıkıyor?
+> *   **Expected Calibration Error (ECE):** < 0.1 olmalı.
+> *   Eğer ECE yüksekse (model aşırı özgüvenli), PPO sırasında yanlış cevaplara çok yüksek ödül verebilir (Reward Hacking).
+> *   Çözüm: `Temperature Scaling` ile kalibre edilir.
+
 ---
 
 ## ⚖️ **FAZ 3A: PPO Implementation**
 
 Proximal Policy Optimization, bir **Critic (value) network** kullanarak advantage tahminini öğrenen bir actor-critic yöntemidir. GAE ile varyansı kontrol altında tutar.
+
+> [!NOTE]
+> **PPO Sahnesindeki Oyuncular (Cast of Characters)**
+> Eğitim sırasında VRAM'de aslında 4 farklı model/kopya bulunur:
+> 1.  **Actor (Oyuncu):** Eğittiğimiz asıl model. Sürekli konuşur ve kendini geliştirir.
+> 2.  **Critic (Eleştirmen):** Actor'ün her cümlesine anlık puan tahmini yapar ("Bence bu cümle 7 puanla bitecek").
+> 3.  **Reference (Referans):** SFT modelinin donmuş (frozen) kopyası. "Eskiden nasıl konuşuyorduk?" diye bakmak için durur (KL Anchor).
+> 4.  **Reward Model (Hakem):** Cevap bittiğinde son notu (8.5/10) verir.
+
+> [!TIP]
+> **Güvenli Öğrenme Mekanizmaları**
+> PPO'yu "güvenli" ve "kararlı" yapan iki temel fren mekanizması vardır:
+> *   **Clipping ("Çok Hızlı Değişme!"):** Actor bazen aşırı heyecanlanıp tüm bildiklerini değiştirmek isteyebilir. PPO, her güncellemede değişimi **%20 (clip_range=0.2)** ile sınırlar.
+> *   **KL Penalty ("Eski Halini Unutma!"):** Model sadece yüksek puan almaya odaklanırsa saçmalayabilir (Reward Hacking). Reference model devreye girer: "Eski halinden çok uzaklaştın!" diyerek ceza keser.
+> *   **Adaptive KL Controller:** Bu ceza katsayısı (`beta`) sabit değildir. Model çok sapıtırsa ceza artar, çok korkak davranırsa ceza azalır (Otopilot).
 
 ### 🎯 PPO Akışı
 
@@ -371,6 +426,14 @@ Responses:   [4.2, 3.8, 2.1, 1.3, 4.5, 2.8]  (RM scores)
 Group Mean:  3.12
 Advantages:  [+1.08, +0.68, -1.02, -1.82, +1.38, -0.32]
 ```
+
+> [!TIP]
+> **Eğitimsel Not: GRPO = "Bütçe Dostu PPO"**
+> GRPO'nun PPO'dan en büyük farkı **Critic Modelini çöpe atmasıdır.**
+> *   **PPO:** "Critic" (ayrı bir model) sürekli "Kaç puan alacağız?" diye tahmin yapar. Bu VRAM yer.
+> *   **GRPO:** Tahmin yapmak yerine aynı soruyu **6 kere** cevaplar. Sonra bu cevapların ortalamasını alır.
+> *   **Mantık:** "Ortalamadan (arkadaşlarımdan) iyi miyim?" sorusuna bakar. Eğer grup ortalaması 5 iken sen 8 aldıysan, ödüllendirilirsin.
+> *   **Sonuç:** Tek bir modelle (Actor) iş biter, ekstra Critic modeline gerek kalmaz (VRAM tasarrufu).
 
 ### 🔢 Score Normalization (Drift Önleme)
 
@@ -525,17 +588,19 @@ Aşağıdaki tablo teorik beklentilere dayanmaktadır. Gerçek sonuçlar deneyse
 ### Faz 1: SFT (Ortak)
 
 ```bash
-python -m mlx_lm.lora \
+# Custom training loop implementation
+python src/train_sft.py \
     --model google/gemma-2b-it \
-    --data HuggingFaceH4/ultrafeedback_binarized \
-    --train --iters 5000 --batch-size 4 --lora-layers 16 \
+    --data data/train.jsonl \
+    --iters 5000 --batch-size 4 --lora-layers 16 \
     --rank 16 --learning-rate 2e-4 --quantize 4bit \
-    --adapter-path ./sft_adapter
+    --adapter-path checkpoints/sft_adapter
 
-python -m mlx_lm.fuse \
+# Custom fusion script
+python src/fuse_model.py \
     --model google/gemma-2b-it \
-    --adapter-path ./sft_adapter \
-    --save-path ./sft_merged_model
+    --adapter-path checkpoints/sft_adapter \
+    --save-path checkpoints/sft_merged_model
 ```
 
 ### Faz 2: RM Training (Bradley-Terry)
