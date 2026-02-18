@@ -1,0 +1,12 @@
+{
+    "batch_size": 2,
+    "grad_accum": 8,
+    "iters": 1800,
+    "learning_rate": 0.0002,
+    "lora_layers": 16,
+    "mask_prompt": true,
+    "max_seq_length": 2028,
+    "model": "google/gemma-2b-it",
+    "rank": 16,
+    "warmup_steps": 100
+}

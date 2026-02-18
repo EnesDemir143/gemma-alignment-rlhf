@@ -13,8 +13,12 @@ description: Final comparison analysis of PPO vs GRPO results
 Compare PPO and GRPO using statistical methods and GPT-4o-mini as judge.
 
 ## Dosyalar
+- `src/generate_responses.py` — Response generation (mlx_lm Python API ile, henüz yazılmadı)
 - `src/eval_final.py` — GPT-4o-mini evaluation with position-swap (henüz yazılmadı)
 - `src/compare_results.py` — Statistical comparison + report generation (henüz yazılmadı)
+
+> Response generation `mlx_lm.load()` ve `mlx_lm.generate()` kullanır;
+> evaluation scriptleri OpenAI API kullanır.
 
 ## Steps
 
@@ -25,12 +29,12 @@ Split from original data (never seen in training):
 
 ### 2. Generate responses from all models
 ```bash
-# Generate responses for each model
 uv run python -m src.generate_responses \
     --models checkpoints/ppo_seed{42,123,777} checkpoints/grpo_seed{42,123,777} checkpoints/sft_merged_model \
     --prompts data/processed/rl/test_prompts.jsonl \
     --output results/responses/
 ```
+> Script internally uses: `mlx_lm.load()`, `mlx_lm.generate()` for each model
 
 ### 3. GPT-4o-mini evaluation (position-swap debiased)
 ```bash

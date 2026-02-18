@@ -551,6 +551,32 @@ def cohens_d(group1, group2):
 > [!WARNING]
 > 3 seed ile istatistiksel güç düşüktür — yalnızca **large** effect size güvenilir tespit edilir. Sonuçlar **medium veya small** çıkarsa, seed sayısı artırılarak (5–10 seed) deney tekrarlanabilir.
 
+### Held-Out Test Set Stratejisi
+
+**Eğitim sırasında ayrı bir test split'e gerek yoktur.** Veri yalnızca `train` ve `valid` olarak ikiye ayrılır:
+
+| Split | Boyut | Amaç |
+|-------|-------|------|
+| `sft_train.jsonl` | ~9,500 | Model eğitimi |
+| `sft_valid.jsonl` | 500 | Eğitim sırasında val loss, token accuracy, overfitting kontrolü |
+
+**Neden ayrı test seti yok?**
+- Final değerlendirme zaten **GPT-4o-mini judge** ile yapılıyor (klasik test-set accuracy değil)
+- 10K veriyi 3'e bölmek train setini gereksiz yere küçültür
+- Val seti checkpoint seçimi için yeterli
+
+**Opsiyonel: Final Held-Out Test (Eğitim Sonrası)**
+
+Pipeline tamamlandıktan sonra, ek bir held-out test ile sonuçlar güçlendirilebilir:
+
+| Strateji | Açıklama | Avantaj |
+|----------|----------|---------|
+| **UltraFeedback kalan veri** | İndirilen 10K dışındaki örneklerden 1–2K çekilir (`download_data.py --target-size 12000`) | Aynı dağılım → fair test |
+| **Farklı dataset** | HelpSteer, LMSYS-Chat vb. dış kaynak | Out-of-distribution generalization ölçümü |
+
+> [!TIP]
+> Kalan UltraFeedback verisi en kolay ve en tutarlı yoldur — aynı dağılımdan geldiği için training verisinde hiç görülmemiş ama comparable örnekler sağlar. Tez için güçlü bir held-out kanıt oluşturur.
+
 ---
 
 ## 🎯 **Expected Trade-offs Table**
@@ -588,16 +614,20 @@ Aşağıdaki tablo teorik beklentilere dayanmaktadır. Gerçek sonuçlar deneyse
 ### Faz 1: SFT (Ortak)
 
 ```bash
-# Custom training loop implementation
-python src/train_sft.py \
+# SFT training (QLoRA)
+uv run python -m src.sft.train \
     --model google/gemma-2b-it \
-    --data data/train.jsonl \
-    --iters 5000 --batch-size 4 --lora-layers 16 \
-    --rank 16 --learning-rate 2e-4 --quantize 4bit \
-    --adapter-path checkpoints/sft_adapter
+    --train-data data/processed/sft/sft_train.jsonl \
+    --valid-data data/processed/sft/sft_valid.jsonl \
+    --iters 1800 --batch-size 4 --grad-accum 4 \
+    --lora-layers 16 --rank 16 \
+    --learning-rate 2e-4 --warmup-steps 100 \
+    --max-seq-length 1024 \
+    --adapter-path checkpoints/sft_adapter \
+    --mask-prompt --grad-checkpoint
 
-# Custom fusion script
-python src/fuse_model.py \
+# Fuse adapter into base model
+python -m src.fuse_model \
     --model google/gemma-2b-it \
     --adapter-path checkpoints/sft_adapter \
     --save-path checkpoints/sft_merged_model

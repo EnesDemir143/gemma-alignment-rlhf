@@ -13,9 +13,12 @@ description: GRPO training with group-relative advantage estimation
 Train policy with GRPO — no Critic needed, uses group-relative advantage from K=6 sampled responses.
 
 ## Dosyalar
-- `src/train_grpo.py` — GRPO training loop (henüz yazılmadı)
+- `src/train_grpo.py` — GRPO training loop (mlx_lm Python API ile custom, henüz yazılmadı)
 - `src/algorithms/grpo.py` — GRPO loss, group advantage, ScoreNormalizer (henüz yazılmadı)
 - `src/utils/kl_controller.py` — Adaptive KL controller (PPO ile paylaşılır)
+
+> Tüm scriptler `mlx_lm` Python API'sini doğrudan kullanır:
+> `mlx_lm.load()`, `linear_to_lora_layers()`, `mlx.nn`, `mlx.optimizers`
 
 ## Steps
 
@@ -48,6 +51,7 @@ uv run python -m src.train_grpo \
     --clip-range 0.2 --kl-schedule phased \
     --output checkpoints/grpo_seed777
 ```
+> Script internally uses: `mlx_lm.load()` for Actor/Reference, `linear_to_lora_layers()` for Actor LoRA, custom GRPO loss + group advantage in `mlx.core`, `ScoreNormalizer` with EMA
 
 ### 2. Monitor during training (every 50 iters)
 - Perplexity (should decrease)

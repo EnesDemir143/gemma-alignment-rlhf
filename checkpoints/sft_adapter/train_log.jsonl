@@ -1,0 +1,24 @@
+{"type": "val", "iteration": 0, "val_loss": 7.9942, "val_ppl": 2963.79, "val_time": 655.46, "token_accuracy": 0.0, "avg_entropy": 0.0}
+{"type": "val", "iteration": 0, "val_loss": NaN, "val_ppl": Infinity, "val_time": 555.8, "token_accuracy": 0.0, "avg_entropy": 0.0}
+{"type": "train", "iteration": 10, "train_loss": 8.2213, "lr": 1.0000000116860974e-07, "tokens_sec": 9.2, "peak_mem_gb": 9.554, "trained_tokens": 391, "it_sec": 0.235, "elapsed_sec": 599.3, "eta_sec": 107280.1}
+{"type": "train", "iteration": 20, "train_loss": 7.4465, "lr": 2.0990000848541968e-06, "tokens_sec": 9.7, "peak_mem_gb": 9.554, "trained_tokens": 851, "it_sec": 0.21, "elapsed_sec": 648.0, "eta_sec": 57671.3}
+{"type": "train", "iteration": 30, "train_loss": 4.7788, "lr": 4.097999863006407e-06, "tokens_sec": 6.6, "peak_mem_gb": 9.554, "trained_tokens": 1209, "it_sec": 0.184, "elapsed_sec": 702.7, "eta_sec": 41459.0}
+{"type": "train", "iteration": 40, "train_loss": NaN, "lr": 8.09599987405818e-06, "tokens_sec": 5.2, "peak_mem_gb": 9.554, "trained_tokens": 1511, "it_sec": 0.173, "elapsed_sec": 761.1, "eta_sec": 33488.1}
+{"type": "train", "iteration": 50, "train_loss": NaN, "lr": 1.0095000106957741e-05, "tokens_sec": 6.5, "peak_mem_gb": 9.554, "trained_tokens": 1856, "it_sec": 0.189, "elapsed_sec": 814.6, "eta_sec": 28509.6}
+{"type": "train", "iteration": 60, "train_loss": NaN, "lr": 1.20939994303626e-05, "tokens_sec": 5.9, "peak_mem_gb": 9.554, "trained_tokens": 2201, "it_sec": 0.17, "elapsed_sec": 874.3, "eta_sec": 25353.3}
+{"type": "train", "iteration": 70, "train_loss": NaN, "lr": 1.4092999663262162e-05, "tokens_sec": 7.2, "peak_mem_gb": 9.554, "trained_tokens": 2592, "it_sec": 0.183, "elapsed_sec": 929.7, "eta_sec": 22978.1}
+{"type": "train", "iteration": 80, "train_loss": NaN, "lr": 1.8091001038555987e-05, "tokens_sec": 7.5, "peak_mem_gb": 9.554, "trained_tokens": 2983, "it_sec": 0.192, "elapsed_sec": 982.6, "eta_sec": 21126.3}
+{"type": "train", "iteration": 90, "train_loss": NaN, "lr": 2.009000127145555e-05, "tokens_sec": 8.5, "peak_mem_gb": 9.554, "trained_tokens": 3397, "it_sec": 0.206, "elapsed_sec": 1031.6, "eta_sec": 19600.3}
+{"type": "val", "iteration": 99, "val_loss": NaN, "val_ppl": Infinity, "val_time": 541.52, "token_accuracy": 0.0, "avg_entropy": 0.0}
+{"type": "train", "iteration": 100, "train_loss": NaN, "lr": 2.208900150435511e-05, "tokens_sec": 7.3, "peak_mem_gb": 9.554, "trained_tokens": 3788, "it_sec": 0.188, "elapsed_sec": 1627.4, "eta_sec": 27665.4}
+{"type": "train", "iteration": 110, "train_loss": NaN, "lr": 2.4087999918265268e-05, "tokens_sec": 8.3, "peak_mem_gb": 9.554, "trained_tokens": 4179, "it_sec": 0.212, "elapsed_sec": 1675.4, "eta_sec": 25739.9}
+{"type": "train", "iteration": 120, "train_loss": NaN, "lr": 2.808600038406439e-05, "tokens_sec": 7.9, "peak_mem_gb": 9.554, "trained_tokens": 4596, "it_sec": 0.189, "elapsed_sec": 1729.4, "eta_sec": 24211.8}
+{"type": "train", "iteration": 130, "train_loss": NaN, "lr": 3.0085000616963953e-05, "tokens_sec": 5.7, "peak_mem_gb": 9.554, "trained_tokens": 4918, "it_sec": 0.176, "elapsed_sec": 1787.1, "eta_sec": 22957.4}
+{"type": "train", "iteration": 140, "train_loss": NaN, "lr": 3.2084000849863514e-05, "tokens_sec": 8.8, "peak_mem_gb": 9.554, "trained_tokens": 5355, "it_sec": 0.201, "elapsed_sec": 1837.2, "eta_sec": 21784.1}
+{"type": "train", "iteration": 150, "train_loss": NaN, "lr": 3.4083001082763076e-05, "tokens_sec": 7.6, "peak_mem_gb": 9.554, "trained_tokens": 5756, "it_sec": 0.191, "elapsed_sec": 1890.6, "eta_sec": 20796.5}
+{"type": "train", "iteration": 160, "train_loss": NaN, "lr": 3.80810015485622e-05, "tokens_sec": 8.6, "peak_mem_gb": 9.554, "trained_tokens": 6170, "it_sec": 0.207, "elapsed_sec": 1939.4, "eta_sec": 19879.0}
+{"type": "train", "iteration": 170, "train_loss": NaN, "lr": 4.008000178146176e-05, "tokens_sec": 6.2, "peak_mem_gb": 9.554, "trained_tokens": 6538, "it_sec": 0.168, "elapsed_sec": 1999.5, "eta_sec": 19171.7}
+{"type": "train", "iteration": 180, "train_loss": NaN, "lr": 4.207900201436132e-05, "tokens_sec": 6.9, "peak_mem_gb": 9.554, "trained_tokens": 6929, "it_sec": 0.176, "elapsed_sec": 2057.1, "eta_sec": 18514.2}
+{"type": "train", "iteration": 190, "train_loss": NaN, "lr": 4.4078002247260883e-05, "tokens_sec": 6.3, "peak_mem_gb": 9.554, "trained_tokens": 7274, "it_sec": 0.182, "elapsed_sec": 2112.9, "eta_sec": 17903.8}
+{"type": "val", "iteration": 199, "val_loss": NaN, "val_ppl": Infinity, "val_time": 542.1, "token_accuracy": 0.0, "avg_entropy": 0.0}
+{"type": "val", "iteration": 0, "val_loss": 7.9848, "val_ppl": 2936.05, "val_time": 808.78, "token_accuracy": 0.0, "avg_entropy": 0.0}

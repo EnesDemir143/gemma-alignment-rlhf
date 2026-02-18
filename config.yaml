@@ -1,5 +1,8 @@
+seed: 42
+
 data:
-  train_jsonl: data/train.jsonl
+  train_jsonl: data/processed/sft/sft_train.jsonl
+  valid_jsonl: data/processed/sft/sft_valid.jsonl
 
 tokenizer:
   model_id: google/gemma-2-2b

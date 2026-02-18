@@ -16,7 +16,8 @@ _DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yaml"
 
 @dataclass
 class DataConfig:
-    train_jsonl: str = "data/train.jsonl"
+    train_jsonl: str = "data/processed/sft/sft_train.jsonl"
+    valid_jsonl: str = "data/processed/sft/sft_valid.jsonl"
 
 
 @dataclass
@@ -40,6 +41,7 @@ class ProjectConfig:
     """Top-level project configuration."""
 
     project_root: Path = field(default_factory=lambda: _DEFAULT_CONFIG_PATH.parent)
+    seed: int = 42
     data: DataConfig = field(default_factory=DataConfig)
     tokenizer: TokenizerConfig = field(default_factory=TokenizerConfig)
     score: ScoreConfig = field(default_factory=ScoreConfig)
@@ -50,6 +52,10 @@ class ProjectConfig:
     @property
     def train_jsonl_path(self) -> Path:
         return self.project_root / self.data.train_jsonl
+
+    @property
+    def valid_jsonl_path(self) -> Path:
+        return self.project_root / self.data.valid_jsonl
 
     @property
     def score_regex(self) -> re.Pattern:
@@ -70,6 +76,7 @@ class ProjectConfig:
 
         return cls(
             project_root=root,
+            seed=raw.get("seed", 42),
             data=DataConfig(**raw.get("data", {})),
             tokenizer=TokenizerConfig(**raw.get("tokenizer", {})),
             score=ScoreConfig(**raw.get("score", {})),

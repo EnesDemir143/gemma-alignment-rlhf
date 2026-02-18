@@ -12,13 +12,19 @@ description: Bradley-Terry Reward Model training on pairwise preferences
 Train a reward model that learns chosen > rejected ranking using Bradley-Terry loss.
 
 ## Dosyalar
-- `src/train_rm_bt.py` — RM training script (henüz yazılmadı)
+- `src/train_rm_bt.py` — RM training script (mlx_lm Python API ile custom, henüz yazılmadı)
 - `src/models/reward_model.py` — BradleyTerryRM class (henüz yazılmadı)
+- `src/eval_rm.py` — RM evaluation script (henüz yazılmadı)
 
 ## Steps
 
 ### 1. Create train/valid split for RM
-Split `rm_pairwise_train.jsonl` into train (90%) and valid (10%) with `seed=42`.
+```bash
+uv run python -m src.split_data \
+    --input data/processed/rm/rm_pairwise_train.jsonl \
+    --output-dir data/processed/rm \
+    --valid-size 500
+```
 - Output: `data/processed/rm/rm_train.jsonl`, `data/processed/rm/rm_valid.jsonl`
 
 ### 2. Train Bradley-Terry RM
@@ -31,10 +37,10 @@ uv run python -m src.train_rm_bt \
     --epochs 2 \
     --learning-rate 1e-4 \
     --lora-rank 8 \
-    --lora-alpha 16 \
     --max-seq-length 1024 \
     --output checkpoints/rm_model_bt
 ```
+> Script internally uses: `mlx_lm.load()`, `linear_to_lora_layers()`, custom `BradleyTerryRM` reward head, custom training loop with BT loss
 
 ### 3. Verify RM quality
 - Pairwise accuracy ≥ 0.70
@@ -48,6 +54,7 @@ uv run python -m src.eval_rm \
     --test-data data/processed/rm/rm_valid.jsonl \
     --metrics accuracy ece
 ```
+> Script internally uses: `mlx_lm.load()`, custom forward pass for pairwise scoring
 
 ## Model Architecture
 ```
@@ -70,6 +77,5 @@ Loss = −log σ(r_chosen − r_rejected)
 | batch_size | 8 |
 | epochs | 2 |
 | lora_rank | 8 |
-| lora_alpha | 16 |
 | max_seq_length | 1024 |
 | quantize | 4bit |

@@ -13,10 +13,13 @@ description: PPO training with Actor-Critic and GAE
 Train policy with PPO using Critic (value network) + GAE advantage estimation.
 
 ## Dosyalar
-- `src/train_ppo.py` — PPO training loop (henüz yazılmadı)
+- `src/train_ppo.py` — PPO training loop (mlx_lm Python API ile custom, henüz yazılmadı)
 - `src/models/critic.py` — GemmaCriticModel (henüz yazılmadı)
 - `src/algorithms/ppo.py` — PPO loss, GAE, reward shaping (henüz yazılmadı)
 - `src/utils/kl_controller.py` — Adaptive KL controller (henüz yazılmadı)
+
+> Tüm scriptler `mlx_lm` Python API'sini doğrudan kullanır:
+> `mlx_lm.load()`, `linear_to_lora_layers()`, `mlx.nn`, `mlx.optimizers`
 
 ## Steps
 
@@ -52,6 +55,7 @@ uv run python -m src.train_ppo \
     --kl-schedule phased \
     --output checkpoints/ppo_seed777
 ```
+> Script internally uses: `mlx_lm.load()` for Actor/Reference, `linear_to_lora_layers()` for Actor LoRA, custom `GemmaCriticModel` with value head, custom PPO loss + GAE implementation in `mlx.core`
 
 ### 2. Monitor during training (every 50 iters)
 - Perplexity (should decrease)
